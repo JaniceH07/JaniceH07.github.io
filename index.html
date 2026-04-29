@@ -1,0 +1,2170 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PM-Janice 工作進度儀表板</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <style>
+        :root {
+            --primary: #66beea;
+            --primary-dark: #4b88a2;
+            --secondary: #4b88a2;
+            --accent: #67e8f9;
+            --success: #2f6f5e;
+            --warning: #c28a2c;
+            --danger: #c24141;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --mono: 'Space Mono', monospace;
+            --sans: 'Noto Sans TC', sans-serif;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: linear-gradient(135deg, #66beea 0%, #4b88a2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+            color: var(--gray-900);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .hdr-brand {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .brand-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+        .hdr-pm {
+            align-self: flex-start;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            background: rgba(71, 85, 105, 0.10);
+            color: #475569;
+            font-family: var(--mono);
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            border: 1px solid rgba(71, 85, 105, 0.16);
+        }
+
+        .hdr-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            color: #475569;
+        }
+
+        .last-update-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, rgba(102, 190, 234, 0.10), rgba(75, 136, 162, 0.10));
+            border: 1px solid rgba(75, 136, 162, 0.18);
+            border-radius: 10px;
+            padding: 0.45rem 0.75rem;
+        }
+
+        .last-update-text {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            white-space: nowrap;
+        }
+
+        .hdr-subtitle {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+        }
+
+        .hdr-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 0.75rem 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border: none;
+            font-family: var(--sans);
+            font-size: 0.92rem;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(37, 99, 235, 0.35);
+        }
+
+        .btn-line {
+            background: white;
+            color: var(--gray-800);
+            border: 2px solid var(--gray-200);
+        }
+
+        .btn-line:hover {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .btn-main {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        .btn-teal {
+            background: linear-gradient(135deg, #66beea, #4b88a2);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-bottom: 1rem;
+            padding: 0.65rem 0.85rem;
+            border-radius: 10px;
+            background: var(--gray-50);
+        }
+
+        .filter-bar {
+            display: grid;
+            grid-template-columns: max-content minmax(560px, 1fr);
+            gap: 0.55rem;
+            align-items: center;
+        }
+
+        .filter-main {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            min-width: 0;
+            align-self: center;
+        }
+
+        .srch-wrap {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .srch-wrap::before {
+            content: '🔍';
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-600);
+        }
+
+        .srch {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+            font-family: var(--sans);
+            background: white;
+            color: var(--gray-900);
+        }
+
+        .srch::placeholder {
+            color: var(--gray-400);
+        }
+
+        .srch:focus,
+        .fsel:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .sel-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .fsel {
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            background: white;
+            color: var(--gray-900);
+            cursor: pointer;
+            font-family: var(--sans);
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+        }
+
+        .fsel:hover {
+            border-color: var(--primary);
+        }
+
+        .fcnt {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            color: var(--gray-600);
+            margin-left: auto;
+        }
+
+        .stats-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.55rem;
+            align-items: center;
+            justify-content: flex-start;
+            align-self: center;
+        }
+
+        .stat-card,
+        .upload-zone,
+        .empty-state,
+        .category-header,
+        .cards-shell {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+        }
+
+        .stat-card {
+            padding: 0.58rem 0.68rem;
+            width: fit-content;
+            min-width: 0;
+            height: fit-content;
+            align-self: center;
+        }
+
+        .sc-head {
+            display: flex;
+            align-items: center;
+            gap: 0.38rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .sc-ico {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        .sc-label {
+            font-size: 0.76rem;
+            color: var(--gray-600);
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .sc-num {
+            font-size: 1.55rem;
+            font-weight: 900;
+            font-family: var(--mono);
+        }
+
+        .sc.tot .sc-num {
+            color: var(--primary);
+        }
+
+        .sc.act .sc-num {
+            color: var(--warning);
+        }
+
+        .sc.don .sc-num {
+            color: var(--success);
+        }
+
+        .sc.urg .sc-num {
+            color: var(--danger);
+        }
+
+        .upload-zone,
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .upload-zone {
+            cursor: pointer;
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+        }
+
+        .upl-icon,
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone h2,
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--gray-900);
+        }
+
+        .upload-zone p,
+        .empty-state p {
+            color: var(--gray-600);
+            margin-bottom: 1rem;
+        }
+
+        .cards-root {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .category-section {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .category-header {
+            padding: 1rem 1.5rem;
+            border-radius: 16px 16px 0 0;
+            margin-bottom: 0;
+        }
+
+        .category-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .category-meta {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        .cards-shell {
+            border-radius: 0 0 16px 16px;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-top: 4px solid transparent;
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        .product-card.p-high {
+            border-top-color: var(--danger);
+        }
+
+        .product-card.p-medium {
+            border-top-color: var(--warning);
+        }
+
+        .product-card.p-normal {
+            border-top-color: var(--primary);
+        }
+
+        .product-card.p-low {
+            border-top-color: var(--accent);
+        }
+
+        .product-card.p-backlog {
+            border-top-color: var(--gray-400);
+        }
+
+        .card-header {
+            padding: 1.25rem 1.25rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            border-bottom: 2px solid var(--gray-100);
+        }
+
+        .row-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            font-family: var(--mono);
+            font-size: 0.76rem;
+            color: var(--gray-600);
+        }
+
+        .row-meta-date {
+            white-space: nowrap;
+        }
+
+        .product-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .status-row {
+            display: grid;
+            grid-template-columns: repeat(4, max-content);
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.45rem;
+        }
+
+        .tag-row {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .priority-tag,
+        .tag,
+        .tag-wt,
+        .tag-notify,
+        .tag-editor {
+            padding: 0.3rem 0.58rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.28rem;
+            line-height: 1.1;
+        }
+
+        .priority-tag {
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .priority-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .priority-medium {
+            background: #f8edd1;
+            color: #8a611d;
+        }
+
+        .priority-normal {
+            background: #d9e5f1;
+            color: #17324d;
+        }
+
+        .priority-low {
+            background: #e6edf4;
+            color: #3d5469;
+        }
+
+        .priority-backlog {
+            background: #eef2f6;
+            color: #5d6d7d;
+        }
+
+        .tag,
+        .tag-wt,
+        .tag-notify,
+        .tag-editor {
+            background: #edf2f7;
+            color: #2f3e4d;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .attach-btn {
+            border: 1px solid rgba(102, 190, 234, 0.45);
+            background: #f4fbff;
+            color: #2f5974;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.28rem 0.6rem;
+            cursor: pointer;
+            transition: background-color .2s ease, transform .2s ease;
+        }
+
+        .attach-btn:hover {
+            background: #e5f4fd;
+            transform: translateY(-1px);
+        }
+
+        .urls-block {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            padding: 0 1.25rem 1rem;
+        }
+
+        .attach-item {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-width: 0;
+        }
+
+        .attach-item .url-a {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .attach-del {
+            border: 1px solid #f3c2c2;
+            background: #fff1f1;
+            color: #a33232;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.16rem 0.42rem;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .attach-del:hover {
+            background: #ffe2e2;
+        }
+
+        .url-a {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            color: var(--primary);
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .url-a:hover {
+            text-decoration: underline;
+        }
+
+        .progress-section {
+            padding: 1rem 1.25rem 1.1rem;
+            background: #f2f6fa;
+            border-top: 1px solid #e0e8ef;
+            border-bottom: 1px solid #e0e8ef;
+        }
+
+        .prog-wrap {
+            position: relative;
+            min-height: 74px;
+            padding-top: 0.15rem;
+        }
+
+        .prog-bar-bg {
+            position: absolute;
+            top: 20px;
+            left: 8px;
+            right: 8px;
+            height: 6px;
+            background: #d2dce7;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .prog-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.5s ease;
+        }
+
+        .prog-wrap.done-wrap .prog-bar-fill {
+            background: linear-gradient(90deg, #66beea, #4b88a2);
+        }
+
+        .prog-nodes {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 0 2px;
+        }
+
+        .prog-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.6rem;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .nd {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #b8c4d1;
+            border: 4px solid #fff;
+            box-shadow: 0 3px 10px rgba(15, 23, 42, 0.16);
+            z-index: 1;
+        }
+
+        .nd.done,
+        .nd.current {
+            background: var(--primary);
+        }
+
+        .nd.blue-done,
+        .nd.blue-current {
+            background: #35536f;
+        }
+
+        .nd.current,
+        .nd.blue-current {
+            width: 22px;
+            height: 22px;
+            border-width: 5px;
+        }
+
+        .nd-lbl {
+            font-size: 0.94rem;
+            line-height: 1.2;
+            color: var(--gray-700);
+            font-weight: 700;
+            white-space: nowrap;
+            text-align: center;
+            margin-top: 0.15rem;
+        }
+
+        .nd-lbl.done,
+        .nd-lbl.current,
+        .nd-lbl.blue-done,
+        .nd-lbl.blue-current {
+            color: var(--gray-900);
+        }
+
+        @media (max-width: 768px) {
+            .prog-wrap {
+                min-height: 84px;
+            }
+
+            .nd-lbl {
+                font-size: 0.84rem;
+                white-space: normal;
+            }
+        }
+
+        .history-section {
+            padding: 1rem 1.25rem 1.25rem;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .history-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #000;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.65rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .history-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.45rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.9rem;
+            color: var(--gray-700);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .history-bullet {
+            flex: 0 0 auto;
+        }
+
+        .history-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 26px;
+            right: 26px;
+            background: var(--gray-900);
+            color: #fff;
+            border-radius: 12px;
+            padding: 11px 18px;
+            font-size: 13px;
+            z-index: 9999;
+            transform: translateY(50px);
+            opacity: 0;
+            transition: all .3s;
+            pointer-events: none;
+        }
+
+        #toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #toast.ok {
+            background: #14532d;
+        }
+
+        #toast.err {
+            background: #7f1d1d;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .filter-bar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            header {
+                padding: 1.5rem;
+            }
+
+            .header-top {
+                flex-direction: column;
+            }
+
+            .brand-meta {
+                align-items: flex-start;
+            }
+
+            .hdr-title {
+                font-size: 1.7rem;
+            }
+
+            .hdr-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .status-row {
+                display: flex;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <div class="hdr-brand">
+                    <div class="brand-meta">
+                        <span class="hdr-pm">產品管理部</span>
+                        <div class="last-update-group">
+                            <span class="last-update-text" id="lastUpdateText">最後更新時間：N/A</span>
+                        </div>
+                    </div>
+                    <div class="title-group">
+                        <span class="hdr-title">PM-Janice 工作進度儀表板</span>
+                    </div>
+                </div>
+                <div class="hdr-actions">
+                    <button class="btn btn-teal" onclick="fetchFromGoogleSheets()">↻ Sheets 同步</button>
+                    <button class="btn btn-line" onclick="downloadSnapshot()" id="btnSnapshot" style="display:none">📋
+                        Excel 複本</button>
+                    <button class="btn btn-line" onclick="downloadTemplate()">📥 空白範本</button>
+                    <button class="btn btn-main" onclick="document.getElementById('fileInput').click()">📤 上傳
+                        Excel</button>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleUpload(event)" />
+                    <input type="file" id="cardAttachmentInput" multiple onchange="handleCardAttachmentSelect(event)"
+                        style="display:none" />
+                </div>
+            </div>
+            <div id="syncStatus" class="sync-status hidden"></div>
+            <div id="filterBar" class="filter-bar hidden">
+                <div class="stats-strip">
+                    <div class="stat-card sc tot">
+                        <div class="sc-head">
+                            <div class="sc-ico">📦</div>
+                            <div class="sc-label">總任務</div>
+                        </div>
+                        <div class="sc-num" id="sTotal">0</div>
+                    </div>
+                    <div class="stat-card sc act">
+                        <div class="sc-head">
+                            <div class="sc-ico">🚧</div>
+                            <div class="sc-label">進行</div>
+                        </div>
+                        <div class="sc-num" id="sActive">0</div>
+                    </div>
+                    <div class="stat-card sc don">
+                        <div class="sc-head">
+                            <div class="sc-ico">✅</div>
+                            <div class="sc-label">完成</div>
+                        </div>
+                        <div class="sc-num" id="sDone">0</div>
+                    </div>
+                    <div class="stat-card sc urg">
+                        <div class="sc-head">
+                            <div class="sc-ico">🔥</div>
+                            <div class="sc-label">緊急</div>
+                        </div>
+                        <div class="sc-num" id="sUrgent">0</div>
+                    </div>
+                </div>
+                <div class="filter-main">
+                    <div class="srch-wrap">
+                        <input class="srch" id="qSearch" type="text" placeholder="搜尋類別、系列、型號、檔案類型…"
+                            oninput="applyFilters()" />
+                    </div>
+                    <div class="sel-group">
+                        <select class="fsel" id="fCat" onchange="applyFilters()">
+                            <option value="">全部類別</option>
+                        </select>
+                        <select class="fsel" id="fProg" onchange="applyFilters()">
+                            <option value="">全部進度</option>
+                            <option>尚未</option>
+                            <option>進行</option>
+                            <option>確認</option>
+                            <option>完成</option>
+                        </select>
+                        <select class="fsel" id="fPri" onchange="applyFilters()">
+                            <option value="">全部優先權</option>
+                            <option>緊急</option>
+                            <option>一般</option>
+                            <option>低</option>
+                        </select>
+                        <select class="fsel" id="fWt" onchange="applyFilters()">
+                            <option value="">全部工作類型</option>
+                            <option>新增</option>
+                            <option>修改</option>
+                            <option>更新</option>
+                            <option>優化</option>
+                            <option>問題</option>
+                        </select>
+                    </div>
+                    <div class="fcnt" id="fCount"></div>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div id="uploadZone" class="upload-zone" onclick="document.getElementById('fileInput').click()"
+                ondragover="dOver(event)" ondragleave="dLeave(event)" ondrop="dDrop(event)">
+                <div class="upl-icon">📤</div>
+                <h2>上傳工作進度 Excel</h2>
+                <p>支援 .xlsx / .xls，或直接拖曳檔案到這裡。</p>
+            </div>
+
+            <div id="cardsArea" class="cards-root hidden"></div>
+        </main>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHEB5EKxXndmWsYV7fh68BEU2BZ2QiVZdbxb6cvWLUhIkcLxgATo9ri41Q1-G1xrHE/exec';
+        const STAGES = ['尚未', '進行', '確認', '完成'];
+        const CATEGORY_OPTIONS = ['資安型 PoE IO', '一般 Ethernet IO', '一般 RS-485 IO', '其他'];
+        const SERIES_OPTIONS = ['ET-2200', 'ET-7x00', 'ETL-2200', 'ETS-2200', 'I-M-7000', 'M-2000', 'M-6000', 'MQ-7200M', 'NSM-2402-T1L', 'tET_tPET', 'tM', 'T1L'];
+        const NOTIFIER_OPTIONS = ['Absent', 'Albert', 'Carl', 'Clear', 'David', 'Janice', 'Jerry', 'Kevin', 'Miller'];
+        const FILE_TYPE_OPTIONS = ['Data Sheet', 'Manual', 'Web', 'Download File', 'Quick Start', 'Web/DS'];
+        const PRIORITY_OPTIONS = ['緊急', '一般', '低'];
+        const WORK_TYPE_OPTIONS = ['新增', '修改', '更新', '優化', '問題'];
+        const TEMPLATE_HEADERS = ['ID', '產品類別', '產品系列', '產品名稱', '通知者', '檔案類型', '優先權', '進度', '工作類型', '說明', '網址', '修改者', '最後更新日期'];
+        const FALLBACK_PRIORITY = '一般';
+        const ATTACHMENT_DB_NAME = 'pm-dashboard-attachments';
+        const ATTACHMENT_DB_VERSION = 1;
+        const ATTACHMENT_STORE = 'attachments';
+        const CLOUD_ATTACHMENT_MAX_SIZE = 8 * 1024 * 1024;
+        let ALL = [];
+        const LOCAL_ATTACHMENTS = new Map();
+        const CLOUD_ATTACHMENTS = new Map();
+        let ACTIVE_ATTACHMENT_KEY = '';
+        let ATTACHMENT_DB_PROMISE = null;
+
+        function openAttachmentDb() {
+            if (!window.indexedDB) return Promise.reject(new Error('瀏覽器不支援 IndexedDB'));
+            if (ATTACHMENT_DB_PROMISE) return ATTACHMENT_DB_PROMISE;
+            ATTACHMENT_DB_PROMISE = new Promise((resolve, reject) => {
+                const req = indexedDB.open(ATTACHMENT_DB_NAME, ATTACHMENT_DB_VERSION);
+                req.onupgradeneeded = () => {
+                    const db = req.result;
+                    if (!db.objectStoreNames.contains(ATTACHMENT_STORE)) {
+                        const store = db.createObjectStore(ATTACHMENT_STORE, { keyPath: 'id' });
+                        store.createIndex('cardKey', 'cardKey', { unique: false });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error || new Error('附件資料庫開啟失敗'));
+            });
+            return ATTACHMENT_DB_PROMISE;
+        }
+
+        function requestToPromise(req) {
+            return new Promise((resolve, reject) => {
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error || new Error('IndexedDB 操作失敗'));
+            });
+        }
+
+        async function saveAttachmentRecord(cardKey, file) {
+            const db = await openAttachmentDb();
+            const tx = db.transaction(ATTACHMENT_STORE, 'readwrite');
+            const store = tx.objectStore(ATTACHMENT_STORE);
+            const record = {
+                id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+                cardKey,
+                name: file.name,
+                type: file.type || '',
+                size: file.size || 0,
+                createdAt: new Date().toISOString(),
+                blob: file
+            };
+            await requestToPromise(store.put(record));
+            return record;
+        }
+
+        async function deleteAttachmentRecord(id) {
+            if (!id) return;
+            const db = await openAttachmentDb();
+            const tx = db.transaction(ATTACHMENT_STORE, 'readwrite');
+            const store = tx.objectStore(ATTACHMENT_STORE);
+            await requestToPromise(store.delete(id));
+        }
+
+        async function loadPersistedAttachments() {
+            try {
+                const db = await openAttachmentDb();
+                const tx = db.transaction(ATTACHMENT_STORE, 'readonly');
+                const store = tx.objectStore(ATTACHMENT_STORE);
+                const rows = await requestToPromise(store.getAll());
+                LOCAL_ATTACHMENTS.clear();
+                rows.forEach(row => {
+                    if (!row || !row.cardKey || !row.blob) return;
+                    const href = URL.createObjectURL(row.blob);
+                    const list = LOCAL_ATTACHMENTS.get(row.cardKey) || [];
+                    list.push({
+                        id: row.id,
+                        name: row.name || '附件',
+                        href
+                    });
+                    LOCAL_ATTACHMENTS.set(row.cardKey, list);
+                });
+            } catch (error) {
+                toast(`附件載入失敗：${error.message || error}`, 'err');
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const result = String(reader.result || '');
+                    const base64 = result.includes(',') ? result.split(',')[1] : '';
+                    resolve(base64);
+                };
+                reader.onerror = () => reject(reader.error || new Error('檔案轉換失敗'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function getAllCardKeys() {
+            return [...new Set(ALL.map(getCardKey).filter(Boolean))];
+        }
+
+        async function uploadAttachmentToCloud(cardKey, file) {
+            if (!APPS_SCRIPT_URL) throw new Error('未設定 Apps Script URL');
+            if (file.size > CLOUD_ATTACHMENT_MAX_SIZE) {
+                throw new Error(`檔案超過 ${Math.round(CLOUD_ATTACHMENT_MAX_SIZE / 1024 / 1024)}MB 限制`);
+            }
+
+            const base64 = await fileToBase64(file);
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'uploadAttachment',
+                    cardKey,
+                    fileName: file.name,
+                    mimeType: file.type || 'application/octet-stream',
+                    dataBase64: base64
+                })
+            });
+            const raw = await res.text();
+            let json = null;
+            try {
+                json = raw ? JSON.parse(raw) : null;
+            } catch (_) {
+                throw new Error(`雲端回應非 JSON（HTTP ${res.status}）：${raw.slice(0, 180)}`);
+            }
+            if (!res.ok) {
+                throw new Error(`HTTP ${res.status}：${(json && json.message) || '雲端附件上傳失敗'}`);
+            }
+            if (!json.ok || !json.url) {
+                throw new Error(json.message || '雲端附件上傳失敗');
+            }
+            return {
+                id: json.id || `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+                name: json.name || file.name,
+                href: json.url
+            };
+        }
+
+        async function loadCloudAttachments() {
+            if (!APPS_SCRIPT_URL || !ALL.length) return;
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'listAttachments',
+                        cardKeys: getAllCardKeys()
+                    })
+                });
+                const json = await res.json();
+                if (!json.ok) return;
+                const rows = Array.isArray(json.attachments) ? json.attachments : [];
+                CLOUD_ATTACHMENTS.clear();
+                rows.forEach(item => {
+                    const key = String(item.cardKey || '').trim();
+                    const name = String(item.name || '').trim();
+                    const href = String(item.url || '').trim();
+                    if (!key || !name || !href) return;
+                    const list = CLOUD_ATTACHMENTS.get(key) || [];
+                    list.push({
+                        id: String(item.id || ''),
+                        name,
+                        href
+                    });
+                    CLOUD_ATTACHMENTS.set(key, list);
+                });
+                applyFilters();
+            } catch (_) {
+                // Ignore cloud attachment load errors to keep dashboard usable.
+            }
+        }
+
+        function handleUpload(e) {
+            const file = e.target.files[0];
+            if (file) syncExcelToGoogle(file);
+            e.target.value = '';
+        }
+
+        function dOver(e) {
+            e.preventDefault();
+            document.getElementById('uploadZone').classList.add('drag-over');
+        }
+
+        function dLeave() {
+            document.getElementById('uploadZone').classList.remove('drag-over');
+        }
+
+        function dDrop(e) {
+            e.preventDefault();
+            document.getElementById('uploadZone').classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) syncExcelToGoogle(file);
+        }
+
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    try {
+                        const workbook = XLSX.read(ev.target.result, { type: 'binary', cellDates: true });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        resolve(
+                            XLSX.utils.sheet_to_json(sheet, { defval: '' })
+                                .map((row, idx) => ({ ...norm(row), _sourceRow: idx + 2 }))
+                                .filter(hasMeaningfulData)
+                        );
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(reader.error);
+                reader.readAsBinaryString(file);
+            });
+        }
+
+        function normalizeProgress(v) {
+            const raw = String(v || '').trim();
+            const map = {
+                '發想中': '尚未',
+                '資料收集中': '尚未',
+                '收資料': '尚未',
+                '尚未': '尚未',
+                '進行中': '進行',
+                '進行': '進行',
+                '待確認': '確認',
+                '確認': '確認',
+                '已完成': '完成',
+                '完成': '完成'
+            };
+            return map[raw] || raw || '尚未';
+        }
+
+        function normalizePriority(v) {
+            const raw = String(v || '').trim();
+            const map = {
+                '高': '緊急',
+                '緊急': '緊急',
+                '一般': '一般',
+                '普通': '一般',
+                '低': '低'
+            };
+            return map[raw] || raw || FALLBACK_PRIORITY;
+        }
+
+        function normalizeWorkType(v) {
+            const raw = String(v || '').trim();
+            const map = {
+                '新增': '新增',
+                '修改': '修改',
+                '更新': '更新',
+                '優化': '優化',
+                '問題': '問題'
+            };
+            return map[raw] || raw;
+        }
+
+        function isSupportedLinkToken(value) {
+            const v = String(value || '').trim();
+            return /^https?:\/\//i.test(v)
+                || /^file:\/\//i.test(v)
+                || /^[a-zA-Z]:[\\/]/.test(v)
+                || /^\\\\/.test(v)
+                || /^[.]{1,2}[\\/]/.test(v)
+                || /^[\\/]/.test(v);
+        }
+
+        function parseUrls(raw) {
+            return String(raw || '')
+                .split(/[\n\r,、]/)
+                .map(s => s.trim())
+                .filter(isSupportedLinkToken);
+        }
+
+        function toFileHref(raw) {
+            const v = String(raw || '').trim();
+            if (!v) return '';
+            if (/^file:\/\//i.test(v)) return v;
+            if (/^[a-zA-Z]:[\\/]/.test(v)) return `file:///${v.replace(/\\/g, '/')}`;
+            if (/^\\\\/.test(v)) return `file://${v.replace(/^\\\\/, '').replace(/\\/g, '/')}`;
+            if (/^[.]{1,2}[\\/]/.test(v) || /^[\\/]/.test(v)) return `file://${v.replace(/\\/g, '/')}`;
+            return '';
+        }
+
+        function resolveLinkHref(raw) {
+            const v = String(raw || '').trim();
+            if (!v) return '';
+            if (/^https?:\/\//i.test(v)) return v;
+            return toFileHref(v);
+        }
+
+        function escapeAttr(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function getDropdownOptions() {
+            return {
+                category: CATEGORY_OPTIONS,
+                series: SERIES_OPTIONS,
+                notifier: NOTIFIER_OPTIONS,
+                fileType: FILE_TYPE_OPTIONS,
+                priority: PRIORITY_OPTIONS,
+                progress: STAGES,
+                workType: WORK_TYPE_OPTIONS
+            };
+        }
+
+        function hasMeaningfulData(row) {
+            return [
+                row.id,
+                row.category,
+                row.series,
+                row.name,
+                row.notifier,
+                row.fileType,
+                row.priority,
+                row.progress,
+                row.workType,
+                row.desc,
+                row.urls.join(''),
+                row.editor,
+                row.lastUpdate
+            ].some(value => String(value || '').trim());
+        }
+
+        function getComparableRow(row) {
+            return {
+                category: String(row.category || '').trim(),
+                series: String(row.series || '').trim(),
+                name: String(row.name || '').trim(),
+                notifier: String(row.notifier || '').trim(),
+                fileType: String(row.fileType || '').trim(),
+                priority: String(row.priority || '').trim(),
+                progress: String(row.progress || '').trim(),
+                workType: String(row.workType || '').trim(),
+                desc: String(row.desc || '').trim(),
+                urls: row.urls.map(url => String(url || '').trim()).filter(Boolean),
+                editor: String(row.editor || '').trim()
+            };
+        }
+
+        function rowsDiffer(a, b) {
+            return JSON.stringify(getComparableRow(a)) !== JSON.stringify(getComparableRow(b));
+        }
+
+        function normalizeCaseId(id) {
+            return String(id || '').trim().toLowerCase();
+        }
+
+        function normalizeNumericId(id) {
+            const v = String(id || '').trim();
+            if (!/^\d+$/.test(v)) return '';
+            return v.replace(/^0+(?=\d)/, '');
+        }
+
+        function getSourceRowLabel(row, fallbackIndex) {
+            const n = Number(row && row._sourceRow);
+            if (Number.isFinite(n) && n >= 2) return n;
+            return fallbackIndex + 2;
+        }
+
+        function validateUploadIds(uploadRows, remoteRows) {
+            const missing = [];
+            const exactMap = new Map();
+            const caseMap = new Map();
+            const numericMap = new Map();
+
+            uploadRows.forEach((row, index) => {
+                const id = String(row.id || '').trim();
+                const sourceRow = getSourceRowLabel(row, index);
+                if (!id) {
+                    missing.push(`第 ${sourceRow} 列`);
+                    return;
+                }
+
+                const exactList = exactMap.get(id) || [];
+                exactList.push(sourceRow);
+                exactMap.set(id, exactList);
+
+                const caseKey = normalizeCaseId(id);
+                if (caseKey) {
+                    const caseList = caseMap.get(caseKey) || [];
+                    caseList.push({ id, sourceRow });
+                    caseMap.set(caseKey, caseList);
+                }
+
+                const numericKey = normalizeNumericId(id);
+                if (numericKey) {
+                    const numericList = numericMap.get(numericKey) || [];
+                    numericList.push({ id, sourceRow });
+                    numericMap.set(numericKey, numericList);
+                }
+            });
+
+            if (missing.length) {
+                return {
+                    ok: false,
+                    message: `ID 不可空白：${missing.join('、')}`
+                };
+            }
+
+            for (const [id, rows] of exactMap.entries()) {
+                if (rows.length > 1) {
+                    return {
+                        ok: false,
+                        message: `ID 重複（${id}）：${rows.map(n => `第 ${n} 列`).join('、')}`
+                    };
+                }
+            }
+
+            for (const [, items] of caseMap.entries()) {
+                const uniqueIds = [...new Set(items.map(x => x.id))];
+                if (uniqueIds.length > 1) {
+                    return {
+                        ok: false,
+                        message: `ID 大小寫不一致：${items.map(x => `${x.id}(第 ${x.sourceRow} 列)`).join('、')}`
+                    };
+                }
+            }
+
+            for (const [, items] of numericMap.entries()) {
+                const uniqueIds = [...new Set(items.map(x => x.id))];
+                if (uniqueIds.length > 1) {
+                    return {
+                        ok: false,
+                        message: `ID 前導零格式不一致：${items.map(x => `${x.id}(第 ${x.sourceRow} 列)`).join('、')}`
+                    };
+                }
+            }
+
+            const remoteCaseMap = new Map();
+            const remoteNumericMap = new Map();
+            remoteRows.forEach(row => {
+                const id = String(row.id || '').trim();
+                if (!id) return;
+                const caseKey = normalizeCaseId(id);
+                if (caseKey && !remoteCaseMap.has(caseKey)) remoteCaseMap.set(caseKey, id);
+                const numericKey = normalizeNumericId(id);
+                if (numericKey && !remoteNumericMap.has(numericKey)) remoteNumericMap.set(numericKey, id);
+            });
+
+            const remoteExactSet = new Set(remoteRows.map(row => String(row.id || '').trim()).filter(Boolean));
+            for (let i = 0; i < uploadRows.length; i += 1) {
+                const row = uploadRows[i];
+                const id = String(row.id || '').trim();
+                if (!id || remoteExactSet.has(id)) continue;
+
+                const sourceRow = getSourceRowLabel(row, i);
+                const caseMatch = remoteCaseMap.get(normalizeCaseId(id));
+                if (caseMatch && caseMatch !== id) {
+                    return {
+                        ok: false,
+                        message: `ID 與既有資料大小寫不一致：第 ${sourceRow} 列為 ${id}，雲端為 ${caseMatch}`
+                    };
+                }
+
+                const numericKey = normalizeNumericId(id);
+                const numericMatch = numericKey ? remoteNumericMap.get(numericKey) : '';
+                if (numericMatch && numericMatch !== id) {
+                    return {
+                        ok: false,
+                        message: `ID 與既有資料前導零格式不一致：第 ${sourceRow} 列為 ${id}，雲端為 ${numericMatch}`
+                    };
+                }
+            }
+
+            return { ok: true, message: '' };
+        }
+
+        function toSheetRow(row) {
+            return [
+                String(row.id || '').trim(),
+                String(row.category || '').trim(),
+                String(row.series || '').trim(),
+                String(row.name || '').trim(),
+                String(row.notifier || '').trim(),
+                String(row.fileType || '').trim(),
+                String(row.priority || '').trim(),
+                String(row.progress || '').trim(),
+                String(row.workType || '').trim(),
+                String(row.desc || '').trim(),
+                row.urls.map(url => String(url || '').trim()).filter(Boolean).join('\n'),
+                String(row.editor || '').trim()
+            ];
+        }
+
+        function norm(row) {
+            let lastUpdate = row['最後更新日期'] || '';
+            if (lastUpdate instanceof Date) {
+                lastUpdate = fmtDate(lastUpdate);
+            } else if (lastUpdate) {
+                lastUpdate = String(lastUpdate).trim();
+            }
+
+            return {
+                id: String(row['ID'] || row['id'] || '').trim(),
+                category: String(row['產品類別'] || '').trim(),
+                series: String(row['產品系列'] || '').trim(),
+                name: String(row['產品名稱'] || '').trim(),
+                notifier: String(row['通知者'] || '').trim(),
+                fileType: String(row['檔案類型'] || '').trim(),
+                priority: normalizePriority(row['優先權']),
+                progress: normalizeProgress(row['進度']),
+                workType: normalizeWorkType(row['工作類型']),
+                desc: String(row['說明'] || '').trim(),
+                urls: parseUrls(row['網址']),
+                editor: String(row['修改者'] || '').trim(),
+                lastUpdate
+            };
+        }
+
+        async function fetchSheetData() {
+            const res = await fetch(APPS_SCRIPT_URL);
+            const json = await res.json();
+            return (Array.isArray(json) ? json : (json.data || [])).map(norm).filter(hasMeaningfulData);
+        }
+
+        async function syncExcelToGoogle(file) {
+            if (!APPS_SCRIPT_URL) {
+                toast('未設定 Apps Script URL', 'err');
+                return;
+            }
+
+            const el = document.getElementById('syncStatus');
+            const lastEl = document.getElementById('lastUpdateText');
+            el.textContent = '⏳ 比對並同步 Excel...';
+            el.classList.remove('hidden');
+            if (lastEl) lastEl.textContent = '最後更新時間：同步中...';
+
+            try {
+                const uploadRows = await readExcelFile(file);
+                const remoteRows = await fetchSheetData();
+                const idValidation = validateUploadIds(uploadRows, remoteRows);
+                if (!idValidation.ok) {
+                    el.textContent = '❌ ID 檢查失敗，已停止同步';
+                    toast(`同步中止：${idValidation.message}`, 'err');
+                    return;
+                }
+                const remoteMap = new Map(remoteRows.filter(row => row.id).map(row => [row.id, row]));
+                const upserts = [];
+
+                uploadRows.forEach(row => {
+                    const current = row.id ? remoteMap.get(row.id) : null;
+                    if (!current || rowsDiffer(row, current)) {
+                        upserts.push(toSheetRow(row));
+                    }
+                });
+
+                if (!upserts.length) {
+                    ALL = remoteRows;
+                    renderAll();
+                    el.textContent = '✅ 沒有異動資料';
+                    toast('沒有需要更新的資料');
+                    setTimeout(() => el.classList.add('hidden'), 3000);
+                    return;
+                }
+
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'syncRows',
+                        rows: upserts
+                    })
+                });
+                const result = await res.json();
+                if (!result.ok) throw new Error(result.message || '同步失敗');
+
+                ALL = await fetchSheetData();
+                renderAll();
+                el.textContent = `✅ 已同步 ${result.updated || 0} 筆修改、${result.inserted || 0} 筆新增`;
+                toast(`同步完成：新增 ${result.inserted || 0} 筆，修改 ${result.updated || 0} 筆`, 'ok');
+                setTimeout(() => el.classList.add('hidden'), 4000);
+            } catch (error) {
+                el.textContent = '❌ 同步失敗';
+                toast(`同步失敗：${error.message || error}`, 'err');
+            }
+        }
+
+        async function fetchFromGoogleSheets() {
+            if (!APPS_SCRIPT_URL) return;
+            const el = document.getElementById('syncStatus');
+            const lastEl = document.getElementById('lastUpdateText');
+            el.textContent = '⏳ 同步中...';
+            el.classList.remove('hidden');
+            if (lastEl) lastEl.textContent = '最後更新時間：同步中...';
+
+            const slowTimer = setTimeout(() => {
+                el.textContent = '⌛ 同步時間較長，持續處理中...';
+            }, 5000);
+
+            try {
+                clearTimeout(slowTimer);
+                ALL = await fetchSheetData();
+                renderAll();
+                el.textContent = '✅ 同步完成';
+                setTimeout(() => el.classList.add('hidden'), 3000);
+            } catch (e) {
+                clearTimeout(slowTimer);
+                el.textContent = '❌ 同步失敗';
+            }
+        }
+
+        function renderAll() {
+            renderStats();
+            renderLastUpdate();
+            buildCatFilter();
+            applyFilters();
+            loadCloudAttachments();
+            show('filterBar');
+            show('cardsArea');
+            hide('uploadZone');
+            document.getElementById('btnSnapshot').style.display = '';
+        }
+
+        function renderStats() {
+            set('sTotal', ALL.length);
+            set('sActive', ALL.filter(d => d.progress === '進行').length);
+            set('sDone', ALL.filter(d => d.progress === '完成').length);
+            set('sUrgent', ALL.filter(d => d.priority === '緊急').length);
+        }
+
+        function renderLastUpdate() {
+            const el = document.getElementById('lastUpdateText');
+            if (!el) return;
+            const dates = ALL.map(d => new Date(d.lastUpdate)).filter(d => !Number.isNaN(d.getTime()));
+            if (!dates.length) {
+                el.textContent = '最後更新時間：N/A';
+                return;
+            }
+            const latest = new Date(Math.max(...dates.map(d => d.getTime())));
+            el.textContent = `最後更新時間：${fmtDate(latest)}`;
+        }
+
+        function fmtDate(s) {
+            if (!s) return '-';
+            const d = new Date(s);
+            if (isNaN(d)) return String(s);
+            const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            return `${ymd} ${hm}`;
+        }
+
+        function fmtDateOnly(s) {
+            if (!s) return '-';
+            const d = new Date(s);
+            if (!isNaN(d)) {
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            }
+            const raw = String(s).trim();
+            const match = raw.match(/\d{4}-\d{2}-\d{2}/);
+            return match ? match[0] : raw;
+        }
+
+        function getLastUpdateTime(value) {
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+        }
+
+        function getCardKey(d) {
+            return [
+                String(d.id || '').trim(),
+                String(d.category || '').trim(),
+                String(d.series || '').trim(),
+                String(d.name || '').trim()
+            ].join('||');
+        }
+
+        async function removeLocalAttachment(encodedCardKey, encodedAttachmentId) {
+            const cardKey = decodeURIComponent(String(encodedCardKey || ''));
+            const attachmentId = decodeURIComponent(String(encodedAttachmentId || ''));
+            const list = LOCAL_ATTACHMENTS.get(cardKey) || [];
+            const idx = list.findIndex(item => String(item.id || '') === attachmentId);
+            if (idx < 0) return;
+
+            const removed = list.splice(idx, 1)[0];
+            if (removed && removed.href) URL.revokeObjectURL(removed.href);
+            if (list.length) LOCAL_ATTACHMENTS.set(cardKey, list);
+            else LOCAL_ATTACHMENTS.delete(cardKey);
+
+            try {
+                await deleteAttachmentRecord(attachmentId);
+            } catch (_) {
+                // keep UI responsive even if IndexedDB cleanup fails
+            }
+
+            toast('已刪除本機附件', 'ok');
+            applyFilters();
+        }
+
+        async function removeCloudAttachment(encodedCardKey, encodedAttachmentId) {
+            const cardKey = decodeURIComponent(String(encodedCardKey || ''));
+            const attachmentId = decodeURIComponent(String(encodedAttachmentId || ''));
+            if (!attachmentId) return;
+
+            if (!APPS_SCRIPT_URL) {
+                toast('未設定 Apps Script URL', 'err');
+                return;
+            }
+
+            try {
+                const res = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'deleteAttachment',
+                        id: attachmentId,
+                        cardKey
+                    })
+                });
+                const json = await res.json();
+                if (!json.ok) throw new Error(json.message || '雲端附件刪除失敗');
+
+                const cloudList = CLOUD_ATTACHMENTS.get(cardKey) || [];
+                const idx = cloudList.findIndex(item => String(item.id || '') === attachmentId);
+                const removed = idx >= 0 ? cloudList.splice(idx, 1)[0] : null;
+                if (cloudList.length) CLOUD_ATTACHMENTS.set(cardKey, cloudList);
+                else CLOUD_ATTACHMENTS.delete(cardKey);
+
+                if (removed && removed.name) {
+                    const localList = LOCAL_ATTACHMENTS.get(cardKey) || [];
+                    const keeps = [];
+                    const deletes = [];
+                    localList.forEach(item => {
+                        if (String(item.name || '') === String(removed.name || '')) deletes.push(item);
+                        else keeps.push(item);
+                    });
+                    if (deletes.length) {
+                        for (const item of deletes) {
+                            if (item.href) URL.revokeObjectURL(item.href);
+                            try {
+                                await deleteAttachmentRecord(item.id);
+                            } catch (_) {
+                                // ignore IndexedDB delete failure
+                            }
+                        }
+                    }
+                    if (keeps.length) LOCAL_ATTACHMENTS.set(cardKey, keeps);
+                    else LOCAL_ATTACHMENTS.delete(cardKey);
+                }
+
+                toast('已刪除雲端附件', 'ok');
+                applyFilters();
+            } catch (error) {
+                toast(`附件刪除失敗：${error.message || error}`, 'err');
+            }
+        }
+
+        function openCardAttachmentPicker(encodedCardKey) {
+            ACTIVE_ATTACHMENT_KEY = decodeURIComponent(String(encodedCardKey || ''));
+            const input = document.getElementById('cardAttachmentInput');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        async function handleCardAttachmentSelect(e) {
+            const files = Array.from(e.target.files || []);
+            if (!ACTIVE_ATTACHMENT_KEY || !files.length) {
+                e.target.value = '';
+                ACTIVE_ATTACHMENT_KEY = '';
+                return;
+            }
+
+            try {
+                const current = LOCAL_ATTACHMENTS.get(ACTIVE_ATTACHMENT_KEY) || [];
+                const cloudCurrent = CLOUD_ATTACHMENTS.get(ACTIVE_ATTACHMENT_KEY) || [];
+                let cloudUploadedCount = 0;
+                const cloudErrors = [];
+                for (const file of files) {
+                    try {
+                        const cloudSaved = await uploadAttachmentToCloud(ACTIVE_ATTACHMENT_KEY, file);
+                        cloudCurrent.push(cloudSaved);
+                        cloudUploadedCount += 1;
+                    } catch (err) {
+                        cloudErrors.push(`${file.name}: ${err && err.message ? err.message : String(err)}`);
+                    }
+                    const saved = await saveAttachmentRecord(ACTIVE_ATTACHMENT_KEY, file);
+                    current.push({
+                        id: saved.id,
+                        name: saved.name,
+                        href: URL.createObjectURL(file)
+                    });
+                }
+                LOCAL_ATTACHMENTS.set(ACTIVE_ATTACHMENT_KEY, current);
+                CLOUD_ATTACHMENTS.set(ACTIVE_ATTACHMENT_KEY, cloudCurrent);
+                const localOnlyCount = files.length - cloudUploadedCount;
+                if (cloudUploadedCount && localOnlyCount) {
+                    toast(`雲端上傳 ${cloudUploadedCount} 個，本機保存 ${localOnlyCount} 個`, 'ok');
+                } else if (cloudUploadedCount) {
+                    toast(`已雲端上傳並本機保存 ${cloudUploadedCount} 個附件`, 'ok');
+                } else {
+                    toast(`已在本機永久保存 ${localOnlyCount} 個附件`, 'ok');
+                }
+                if (cloudErrors.length) {
+                    toast(`雲端失敗：${cloudErrors[0]}`, 'err');
+                    console.error('Cloud upload errors:', cloudErrors);
+                }
+                applyFilters();
+            } catch (error) {
+                toast(`附件保存失敗：${error.message || error}`, 'err');
+            }
+
+            e.target.value = '';
+            ACTIVE_ATTACHMENT_KEY = '';
+        }
+
+        function buildCatFilter() {
+            const cats = [...new Set(ALL.map(d => d.category).filter(Boolean))].sort();
+            document.getElementById('fCat').innerHTML = '<option value="">全部類別</option>' + cats.map(c => `<option>${x(c)}</option>`).join('');
+        }
+
+        function applyFilters() {
+            const q = document.getElementById('qSearch').value.toLowerCase();
+            const cat = document.getElementById('fCat').value;
+            const progress = document.getElementById('fProg').value;
+            const priority = document.getElementById('fPri').value;
+            const workType = document.getElementById('fWt').value;
+
+            const data = ALL.filter(d => {
+                if (q && !`${d.id} ${d.category} ${d.series} ${d.name} ${d.fileType}`.toLowerCase().includes(q)) return false;
+                if (cat && d.category !== cat) return false;
+                if (progress && d.progress !== progress) return false;
+                if (priority && d.priority !== priority) return false;
+                if (workType && d.workType !== workType) return false;
+                return true;
+            }).sort((a, b) => getLastUpdateTime(b.lastUpdate) - getLastUpdateTime(a.lastUpdate));
+
+            set('fCount', `${data.length} 筆`);
+            renderCards(data);
+        }
+
+        function renderCards(data) {
+            const priorityClass = p => {
+                if (p === '緊急') return 'high';
+                if (p === '一般') return 'normal';
+                if (p === '低') return 'low';
+                return 'backlog';
+            };
+
+            const groups = data.reduce((acc, item) => {
+                const key = item.category || '未分類';
+                (acc[key] ||= []).push(item);
+                return acc;
+            }, {});
+
+            const html = Object.entries(groups).map(([category, items]) => {
+                const cards = items.map(d => {
+                    const stageIndex = Math.max(STAGES.indexOf(d.progress), 0);
+                    const pct = Math.round((stageIndex / Math.max(STAGES.length - 1, 1)) * 100);
+                    const isDone = d.progress === '完成';
+                    const cardKey = getCardKey(d);
+                    const encodedCardKey = encodeURIComponent(cardKey);
+                    const localAttachments = LOCAL_ATTACHMENTS.get(cardKey) || [];
+                    const cloudAttachments = CLOUD_ATTACHMENTS.get(cardKey) || [];
+                    const nodes = STAGES.map((stage, i) => {
+                        const cls = isDone ? 'blue-done' : (i < stageIndex ? 'done' : i === stageIndex ? 'current' : '');
+                        return `<div class="prog-node"><div class="nd ${cls}"></div><div class="nd-lbl ${cls}">${x(stage)}</div></div>`;
+                    }).join('');
+                    const historyItems = d.desc ? d.desc.split('\n').map(line => line.trim()).filter(Boolean) : [];
+                    const linkRows = d.urls.map(u => {
+                        const href = resolveLinkHref(u);
+                        if (!href) return '';
+                        const isWeb = /^https?:\/\//i.test(href);
+                        const icon = isWeb ? '🌐' : '📎';
+                        return `<a class="url-a" href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer">${icon} ${x(u)}</a>`;
+                    }).filter(Boolean);
+                    const cloudNameSet = new Set(cloudAttachments.map(file => String(file.name || '')));
+                    const localVisible = localAttachments.filter(file => !cloudNameSet.has(String(file.name || '')));
+                    const cloudRows = cloudAttachments.map(file => {
+                        const encodedAttachmentId = encodeURIComponent(String(file.id || ''));
+                        return `<div class="attach-item"><a class="url-a" href="${escapeAttr(file.href)}" target="_blank" rel="noopener noreferrer">☁️ ${x(file.name)}</a><button type="button" class="attach-del" onclick="removeCloudAttachment('${encodedCardKey}','${encodedAttachmentId}')">刪除</button></div>`;
+                    });
+                    const attachmentRows = localVisible.map(file => {
+                        const encodedAttachmentId = encodeURIComponent(String(file.id || ''));
+                        return `<div class="attach-item"><a class="url-a" href="${escapeAttr(file.href)}" download="${escapeAttr(file.name)}">💾 ${x(file.name)}</a><button type="button" class="attach-del" onclick="removeLocalAttachment('${encodedCardKey}','${encodedAttachmentId}')">刪除</button></div>`;
+                    });
+                    const allRows = [...linkRows, ...cloudRows, ...attachmentRows];
+
+                    return `
+                        <article class="product-card p-${priorityClass(d.priority)}">
+                            <div class="card-header">
+                                <div class="row-meta">
+                                    <span>${x(d.category || '未分類')} / ${x(d.series || '-')}</span>
+                                    <span class="row-meta-date">最後更新日期 ${x(fmtDateOnly(d.lastUpdate))}</span>
+                                </div>
+                                <div class="product-title">${x(d.name || '未命名項目')}</div>
+                                <div class="status-row">
+                                    ${d.priority ? `<span class="priority-tag priority-${priorityClass(d.priority)}">${x(d.priority)}</span>` : ''}
+                                    ${d.fileType ? `<span class="tag">${x(d.fileType)}</span>` : ''}
+                                    ${d.workType ? `<span class="tag-wt">${x(d.workType)}</span>` : ''}
+                                    ${d.notifier ? `<span class="tag-notify">👤 ${x(d.notifier)}</span>` : ''}
+                                </div>
+                                <div class="card-actions">
+                                    <button type="button" class="attach-btn" onclick="openCardAttachmentPicker('${encodedCardKey}')">+ 附件</button>
+                                </div>
+                            </div>
+                            ${allRows.length ? `<div class="urls-block">${allRows.join('')}</div>` : ''}
+                            <div class="progress-section">
+                                <div class="prog-wrap ${isDone ? 'done-wrap' : ''}">
+                                    <div class="prog-bar-bg"><div class="prog-bar-fill" style="width:${pct}%"></div></div>
+                                    <div class="prog-nodes">${nodes}</div>
+                                </div>
+                            </div>
+                            ${historyItems.length ? `<div class="history-section"><div class="history-title">更新說明</div>${historyItems.map(line => `<div class="history-item"><span class="history-bullet">•</span><span class="history-text">${x(line)}</span></div>`).join('')}</div>` : ''}
+                        </article>`;
+                }).join('');
+
+                return `
+                    <section class="category-section">
+                        <div class="category-header">
+                            <h2>${x(category)}</h2>
+                            <div class="category-meta">${items.length} 項</div>
+                        </div>
+                        <div class="cards-shell">
+                            <div class="cards-grid">${cards}</div>
+                        </div>
+                    </section>`;
+            }).join('');
+
+            document.getElementById('cardsArea').innerHTML = html || `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h3>目前沒有符合條件的資料</h3>
+                    <p>請調整搜尋或篩選條件後再查看。</p>
+                </div>`;
+        }
+
+        function buildDropdownSheet(wb, dropdownOptions) {
+            const listWs = wb.addWorksheet('下拉選單', { state: 'veryHidden' });
+            const configs = [
+                { key: 'category', column: 'A', options: dropdownOptions.category },
+                { key: 'series', column: 'B', options: dropdownOptions.series },
+                { key: 'notifier', column: 'C', options: dropdownOptions.notifier },
+                { key: 'fileType', column: 'D', options: dropdownOptions.fileType },
+                { key: 'priority', column: 'E', options: dropdownOptions.priority },
+                { key: 'progress', column: 'F', options: dropdownOptions.progress },
+                { key: 'workType', column: 'G', options: dropdownOptions.workType }
+            ];
+
+            configs.forEach(config => {
+                config.options.forEach((option, index) => {
+                    listWs.getCell(`${config.column}${index + 1}`).value = option;
+                });
+            });
+
+            return Object.fromEntries(configs.map(config => [
+                config.key,
+                config.options.length ? `'下拉選單'!$${config.column}$1:$${config.column}$${config.options.length}` : ''
+            ]));
+        }
+
+        function applyDropdownValidation(ws, columnKey, formulaRange, startRow, endRow) {
+            if (!formulaRange) return;
+            for (let row = startRow; row <= endRow; row++) {
+                ws.getCell(`${columnKey}${row}`).dataValidation = {
+                    type: 'list',
+                    allowBlank: true,
+                    showDropDown: true,
+                    formulae: [formulaRange],
+                    showErrorMessage: true,
+                    errorTitle: '輸入值不在清單內',
+                    error: '請從下拉選單中選擇有效的項目。'
+                };
+            }
+        }
+
+        function measureTextWidth(value) {
+            const lines = String(value || '').split(/\r?\n/);
+            return lines.reduce((max, line) => {
+                const width = [...line].reduce((sum, ch) => sum + (/[\u0000-\u00ff]/.test(ch) ? 1 : 2), 0);
+                return Math.max(max, width);
+            }, 0);
+        }
+
+        function applyColumnWidths(ws) {
+            const fixedWidthMap = {
+                1: 6,
+                10: 50,
+                11: 50,
+                13: 20
+            };
+            const minWidthMap = {
+                1: 14,
+                2: 18,
+                3: 16,
+                4: 18,
+                5: 12,
+                6: 14,
+                7: 10,
+                8: 10
+            };
+
+            TEMPLATE_HEADERS.forEach((header, index) => {
+                const columnIndex = index + 1;
+                if (fixedWidthMap[columnIndex]) {
+                    ws.getColumn(columnIndex).width = fixedWidthMap[columnIndex];
+                    return;
+                }
+
+                let maxWidth = measureTextWidth(header);
+                ws.getColumn(columnIndex).eachCell({ includeEmpty: true }, cell => {
+                    maxWidth = Math.max(maxWidth, measureTextWidth(cell.value));
+                });
+
+                const minWidth = minWidthMap[columnIndex] || 12;
+                ws.getColumn(columnIndex).width = Math.min(Math.max(maxWidth + 3, minWidth), 60);
+            });
+        }
+
+        function applyDefaultColumnStyle(ws, fontStyle) {
+            TEMPLATE_HEADERS.forEach((_, index) => {
+                ws.getColumn(index + 1).style = { font: fontStyle };
+            });
+            ws.getColumn(1).alignment = { horizontal: 'center' };
+        }
+
+        function applyTimestampFormula(ws, startRow, endRow, fontStyle) {
+            for (let row = startRow; row <= endRow; row++) {
+                const cell = ws.getCell(`M${row}`);
+                cell.value = { formula: `IF(COUNTA(A${row}:L${row})=0,"",NOW())` };
+                cell.numFmt = 'yyyy-mm-dd hh:mm';
+                cell.font = fontStyle;
+            }
+        }
+
+        async function downloadTemplate() {
+            const wb = new ExcelJS.Workbook();
+            wb.calcProperties.fullCalcOnLoad = true;
+            const ws = wb.addWorksheet('工作進度表');
+            const fontStyle = { name: '微軟正黑體', size: 11 };
+            const dropdownRanges = buildDropdownSheet(wb, getDropdownOptions());
+            applyDefaultColumnStyle(ws, fontStyle);
+
+            const headerRow = ws.addRow(TEMPLATE_HEADERS);
+            headerRow.eachCell(cell => {
+                cell.font = { ...fontStyle, bold: true };
+            });
+
+            const lastRow = 2;
+            applyDropdownValidation(ws, 'B', dropdownRanges.category, 2, lastRow);
+            applyDropdownValidation(ws, 'C', dropdownRanges.series, 2, lastRow);
+            applyDropdownValidation(ws, 'E', dropdownRanges.notifier, 2, lastRow);
+            applyDropdownValidation(ws, 'F', dropdownRanges.fileType, 2, lastRow);
+            applyDropdownValidation(ws, 'G', dropdownRanges.priority, 2, lastRow);
+            applyDropdownValidation(ws, 'H', dropdownRanges.progress, 2, lastRow);
+            applyDropdownValidation(ws, 'I', dropdownRanges.workType, 2, lastRow);
+            applyTimestampFormula(ws, 2, lastRow, fontStyle);
+            applyColumnWidths(ws);
+
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = '工作進度範本.xlsx';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        async function downloadSnapshot() {
+            if (!ALL.length) {
+                toast('目前沒有資料可以匯出', 'err');
+                return;
+            }
+
+            const rows = ALL.map(d => [
+                d.id,
+                d.category,
+                d.series,
+                d.name,
+                d.notifier,
+                d.fileType,
+                d.priority,
+                d.progress,
+                d.workType,
+                d.desc,
+                d.urls.join('\n'),
+                d.editor,
+                fmtDate(d.lastUpdate)
+            ]);
+
+            const wb = new ExcelJS.Workbook();
+            wb.calcProperties.fullCalcOnLoad = true;
+            const ws = wb.addWorksheet('工作進度表');
+            const fontStyle = { name: '微軟正黑體', size: 11 };
+            const dropdownRanges = buildDropdownSheet(wb, getDropdownOptions());
+            applyDefaultColumnStyle(ws, fontStyle);
+
+            const headerRow = ws.addRow(TEMPLATE_HEADERS);
+            headerRow.eachCell(cell => {
+                cell.font = { ...fontStyle, bold: true };
+            });
+
+            rows.forEach(row => {
+                const r = ws.addRow(row);
+                r.eachCell(cell => {
+                    cell.font = fontStyle;
+                });
+            });
+
+            const lastRow = rows.length + 2;
+            applyDropdownValidation(ws, 'B', dropdownRanges.category, 2, lastRow);
+            applyDropdownValidation(ws, 'C', dropdownRanges.series, 2, lastRow);
+            applyDropdownValidation(ws, 'E', dropdownRanges.notifier, 2, lastRow);
+            applyDropdownValidation(ws, 'F', dropdownRanges.fileType, 2, lastRow);
+            applyDropdownValidation(ws, 'G', dropdownRanges.priority, 2, lastRow);
+            applyDropdownValidation(ws, 'H', dropdownRanges.progress, 2, lastRow);
+            applyDropdownValidation(ws, 'I', dropdownRanges.workType, 2, lastRow);
+            applyTimestampFormula(ws, rows.length + 2, lastRow, fontStyle);
+            applyColumnWidths(ws);
+
+            const buf = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `工作進度_快照_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        }
+
+        function x(s) {
+            return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function show(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function hide(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function set(id, v) {
+            document.getElementById(id).textContent = v;
+        }
+
+        function toast(m, t = '') {
+            const e = document.getElementById('toast');
+            e.textContent = m;
+            e.className = 'show ' + t;
+            setTimeout(() => {
+                e.className = '';
+            }, 3000);
+        }
+
+        function revokeLocalAttachments() {
+            LOCAL_ATTACHMENTS.forEach(list => {
+                list.forEach(file => {
+                    if (file && file.href) URL.revokeObjectURL(file.href);
+                });
+            });
+        }
+
+        window.onload = async () => {
+            await loadPersistedAttachments();
+            if (APPS_SCRIPT_URL) fetchFromGoogleSheets();
+        };
+        window.addEventListener('beforeunload', revokeLocalAttachments);
+    </script>
+</body>
+
+</html>
