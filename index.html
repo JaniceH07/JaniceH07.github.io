@@ -890,7 +890,7 @@
                     <div class="brand-meta">
                         <span class="hdr-pm">產品管理部</span>
                         <div class="last-update-group">
-                            <span class="last-update-text" id="lastUpdateText">最後更新時間：N/A</span>
+                            <span class="last-update-text" id="lastUpdateText">最新資料：N/A</span>
                         </div>
                     </div>
                     <div class="title-group">
@@ -1007,9 +1007,11 @@
         const ATTACHMENT_STORE = 'attachments';
         const CLOUD_ATTACHMENT_MAX_SIZE = 8 * 1024 * 1024;
         let ALL = [];
+        let LAST_DATA_CHANGE_AT = null;
         const LOCAL_ATTACHMENTS = new Map();
         const CLOUD_ATTACHMENTS = new Map();
         let ACTIVE_ATTACHMENT_KEY = '';
+        const LAST_DATA_CHANGE_KEY = 'pm_last_data_change_at';
         let ATTACHMENT_DB_PROMISE = null;
 
         function openAttachmentDb() {
@@ -1533,7 +1535,7 @@
             const lastEl = document.getElementById('lastUpdateText');
             el.textContent = '⏳ 比對並同步 Excel...';
             el.classList.remove('hidden');
-            if (lastEl) lastEl.textContent = '最後更新時間：同步中...';
+            if (lastEl) lastEl.textContent = '最新資料：同步中...';
 
             try {
                 const uploadRows = await readExcelFile(file);
@@ -1545,6 +1547,10 @@
                     return;
                 }
                 const remoteMap = new Map(remoteRows.filter(row => row.id).map(row => [row.id, row]));
+                const uploadIdSet = new Set(uploadRows.map(row => String(row.id || '').trim()).filter(Boolean));
+                const deleteIds = remoteRows
+                    .map(row => String(row.id || '').trim())
+                    .filter(id => id && !uploadIdSet.has(id));
                 const upserts = [];
 
                 uploadRows.forEach(row => {
@@ -1554,7 +1560,7 @@
                     }
                 });
 
-                if (!upserts.length) {
+                if (!upserts.length && !deleteIds.length) {
                     ALL = remoteRows;
                     renderAll();
                     el.textContent = '✅ 沒有異動資料';
@@ -1568,16 +1574,30 @@
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify({
                         action: 'syncRows',
-                        rows: upserts
+                        rows: upserts,
+                        deleteIds
                     })
                 });
                 const result = await res.json();
                 if (!result.ok) throw new Error(result.message || '同步失敗');
 
+                const hasDataChange = upserts.length > 0 || deleteIds.length > 0;
+                if (hasDataChange) {
+                    LAST_DATA_CHANGE_AT = new Date();
+                    try {
+                        localStorage.setItem(LAST_DATA_CHANGE_KEY, LAST_DATA_CHANGE_AT.toISOString());
+                    } catch (_) {
+                        // ignore localStorage write failure
+                    }
+                }
                 ALL = await fetchSheetData();
                 renderAll();
-                el.textContent = `✅ 已同步 ${result.updated || 0} 筆修改、${result.inserted || 0} 筆新增`;
-                toast(`同步完成：新增 ${result.inserted || 0} 筆，修改 ${result.updated || 0} 筆`, 'ok');
+                const deleted = result.deleted || 0;
+                el.textContent = `✅ 已同步 ${result.updated || 0} 筆修改、${result.inserted || 0} 筆新增、${deleted} 筆刪除`;
+                toast(`同步完成：新增 ${result.inserted || 0} 筆，修改 ${result.updated || 0} 筆，刪除 ${deleted} 筆`, 'ok');
+                if (deleteIds.length && !deleted) {
+                    toast('已送出刪除清單，但雲端未回報刪除筆數，請確認 Apps Script 是否支援 deleteIds', 'err');
+                }
                 setTimeout(() => el.classList.add('hidden'), 4000);
             } catch (error) {
                 el.textContent = '❌ 同步失敗';
@@ -1591,7 +1611,7 @@
             const lastEl = document.getElementById('lastUpdateText');
             el.textContent = '⏳ 同步中...';
             el.classList.remove('hidden');
-            if (lastEl) lastEl.textContent = '最後更新時間：同步中...';
+            if (lastEl) lastEl.textContent = '最新資料：同步中...';
 
             const slowTimer = setTimeout(() => {
                 el.textContent = '⌛ 同步時間較長，持續處理中...';
@@ -1631,13 +1651,17 @@
         function renderLastUpdate() {
             const el = document.getElementById('lastUpdateText');
             if (!el) return;
+            if (LAST_DATA_CHANGE_AT) {
+                el.textContent = `最新資料：${fmtDate(LAST_DATA_CHANGE_AT)}`;
+                return;
+            }
             const dates = ALL.map(d => new Date(d.lastUpdate)).filter(d => !Number.isNaN(d.getTime()));
             if (!dates.length) {
-                el.textContent = '最後更新時間：N/A';
+                el.textContent = '最新資料：N/A';
                 return;
             }
             const latest = new Date(Math.max(...dates.map(d => d.getTime())));
-            el.textContent = `最後更新時間：${fmtDate(latest)}`;
+            el.textContent = `最新資料：${fmtDate(latest)}`;
         }
 
         function fmtDate(s) {
@@ -1846,14 +1870,20 @@
                 return 'backlog';
             };
 
+            const normalizeCategoryGroupKey = value => {
+                const raw = String(value || '').replace(/\s+/g, ' ').trim();
+                return raw || '未分類';
+            };
+
             const groups = data.reduce((acc, item) => {
-                const key = item.category || '未分類';
-                (acc[key] ||= []).push(item);
+                const key = normalizeCategoryGroupKey(item.category);
+                if (!acc[key]) acc[key] = { title: key, items: [] };
+                acc[key].items.push(item);
                 return acc;
             }, {});
 
-            const html = Object.entries(groups).map(([category, items]) => {
-                const cards = items.map(d => {
+            const html = Object.values(groups).map(group => {
+                const cards = group.items.map(d => {
                     const stageIndex = Math.max(STAGES.indexOf(d.progress), 0);
                     const pct = Math.round((stageIndex / Math.max(STAGES.length - 1, 1)) * 100);
                     const isDone = d.progress === '完成';
@@ -1917,8 +1947,8 @@
                 return `
                     <section class="category-section">
                         <div class="category-header">
-                            <h2>${x(category)}</h2>
-                            <div class="category-meta">${items.length} 項</div>
+                            <h2>${x(group.title)}</h2>
+                            <div class="category-meta">${group.items.length} 項</div>
                         </div>
                         <div class="cards-shell">
                             <div class="cards-grid">${cards}</div>
@@ -2160,6 +2190,15 @@
         }
 
         window.onload = async () => {
+            try {
+                const saved = localStorage.getItem(LAST_DATA_CHANGE_KEY);
+                if (saved) {
+                    const parsed = new Date(saved);
+                    if (!Number.isNaN(parsed.getTime())) LAST_DATA_CHANGE_AT = parsed;
+                }
+            } catch (_) {
+                // ignore localStorage read failure
+            }
             await loadPersistedAttachments();
             if (APPS_SCRIPT_URL) fetchFromGoogleSheets();
         };
@@ -2168,3 +2207,4 @@
 </body>
 
 </html>
+
