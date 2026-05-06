@@ -993,6 +993,7 @@
 
     <script>
         const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHEB5EKxXndmWsYV7fh68BEU2BZ2QiVZdbxb6cvWLUhIkcLxgATo9ri41Q1-G1xrHE/exec';
+        const OVERWRITE_PASSWORD = 'PM2026';
         const STAGES = ['尚未', '進行', '確認', '完成'];
         const CATEGORY_OPTIONS = ['資安型 PoE IO', '一般 Ethernet IO', '一般 RS-485 IO', '其他'];
         const SERIES_OPTIONS = ['ET-2200', 'ET-7x00', 'ETL-2200', 'ETS-2200', 'I-M-7000', 'M-2000', 'M-6000', 'MQ-7200M', 'NSM-2402-T1L', 'tET_tPET', 'tM', 'T1L'];
@@ -1525,6 +1526,46 @@
             return (Array.isArray(json) ? json : (json.data || [])).map(norm).filter(hasMeaningfulData);
         }
 
+        function askOverwritePassword() {
+            return new Promise(resolve => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;';
+                const box = document.createElement('div');
+                box.style.cssText = 'width:min(420px,100%);background:#fff;border-radius:14px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25);font-family:var(--sans);';
+                box.innerHTML = `
+                    <div style="font-weight:700;color:#1f2937;margin-bottom:10px;">輸入覆蓋密碼</div>
+                    <div style="font-size:14px;color:#4b5563;margin-bottom:12px;">如需覆蓋 Google 表單資料，請輸入密碼。</div>
+                    <input id="overwritePwdInput" type="password" autocomplete="off" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;outline:none;" />
+                    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
+                        <button id="overwritePwdCancel" style="border:1px solid #d1d5db;background:#fff;color:#374151;padding:8px 12px;border-radius:10px;cursor:pointer;">取消</button>
+                        <button id="overwritePwdOk" style="border:none;background:#4b88a2;color:#fff;padding:8px 12px;border-radius:10px;cursor:pointer;">確認</button>
+                    </div>
+                `;
+                overlay.appendChild(box);
+                document.body.appendChild(overlay);
+
+                const input = box.querySelector('#overwritePwdInput');
+                const okBtn = box.querySelector('#overwritePwdOk');
+                const cancelBtn = box.querySelector('#overwritePwdCancel');
+
+                const close = value => {
+                    overlay.remove();
+                    resolve(value);
+                };
+
+                okBtn.onclick = () => close(String(input.value || ''));
+                cancelBtn.onclick = () => close(null);
+                overlay.onclick = e => {
+                    if (e.target === overlay) close(null);
+                };
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') close(String(input.value || ''));
+                    if (e.key === 'Escape') close(null);
+                });
+                setTimeout(() => input.focus(), 0);
+            });
+        }
+
         async function syncExcelToGoogle(file) {
             if (!APPS_SCRIPT_URL) {
                 toast('未設定 Apps Script URL', 'err');
@@ -1539,6 +1580,13 @@
 
             try {
                 const uploadRows = await readExcelFile(file);
+                if (!uploadRows.length) {
+                    el.textContent = '❌ 上傳檔案筆數為 0，已停止同步';
+                    toast('上傳檔案沒有資料（筆數=0），不可覆蓋 Google 表單資料', 'err');
+                    return;
+                }
+                const inputPwd = await askOverwritePassword();
+                const canOverwriteGoogle = inputPwd === OVERWRITE_PASSWORD;
                 const remoteRows = await fetchSheetData();
                 const idValidation = validateUploadIds(uploadRows, remoteRows);
                 if (!idValidation.ok) {
@@ -1561,11 +1609,20 @@
                 });
 
                 if (!upserts.length && !deleteIds.length) {
-                    ALL = remoteRows;
+                    ALL = canOverwriteGoogle ? remoteRows : uploadRows;
                     renderAll();
                     el.textContent = '✅ 沒有異動資料';
-                    toast('沒有需要更新的資料');
+                    toast(canOverwriteGoogle ? '沒有需要更新的資料' : '密碼未通過，僅同步 Excel 檔案資料（無異動）');
                     setTimeout(() => el.classList.add('hidden'), 3000);
+                    return;
+                }
+
+                if (!canOverwriteGoogle) {
+                    ALL = uploadRows;
+                    renderAll();
+                    el.textContent = '⚠️ 密碼未通過，僅同步 Excel 檔案資料';
+                    toast('密碼錯誤或取消輸入：未覆蓋 Google 表單資料', 'err');
+                    setTimeout(() => el.classList.add('hidden'), 4000);
                     return;
                 }
 
